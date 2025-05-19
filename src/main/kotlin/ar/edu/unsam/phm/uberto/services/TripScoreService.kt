@@ -1,7 +1,9 @@
 package ar.edu.unsam.phm.uberto.services
 
 import ar.edu.unsam.phm.uberto.BusinessException
+import ar.edu.unsam.phm.uberto.FailSaveEntity
 import ar.edu.unsam.phm.uberto.dto.TripScoreDTO
+import ar.edu.unsam.phm.uberto.model.Passenger
 import ar.edu.unsam.phm.uberto.model.Trip
 import ar.edu.unsam.phm.uberto.model.TripScore
 import ar.edu.unsam.phm.uberto.model.User
@@ -9,63 +11,53 @@ import ar.edu.unsam.phm.uberto.repository.DriverRepository
 import ar.edu.unsam.phm.uberto.repository.PassengerRepository
 import ar.edu.unsam.phm.uberto.repository.TripScoreRepository
 import ar.edu.unsam.phm.uberto.repository.TripsRepository
+import jakarta.transaction.Transactional
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 
 @Service
 class TripScoreService(
-    private val tripScoreRepo: TripScoreRepository,
     private val tripRepo: TripsRepository,
-    private val driverRepo: DriverRepository,
     private val passengerRepo: PassengerRepository
 ) {
-    fun getFromUser(userId: Int): List<Trip?>{
-//        Con JPA, se consulta directamente a los viajes que tengan una calificacion con ESE ID
-        val users = driverRepo.instances.toList() + passengerRepo.instances.toList()
-        val user: User? = users.find { it.userId == userId} ?: throw Exception("ERROR id")
-
-        return user!!.trips.filter{ it.score != null}
+    fun getFromPassenger(trips:List<Trip>): List<Trip?>{
+        val tripsScore  = trips.filter { it.score != null }
+        return tripsScore
     }
 
-    fun getAllFromDriver(userId: Int): List<TripScore?>{
-        val user = driverRepo.searchByUserID(userId)
-        if(user == null ) throw Exception("ERROR id")
-        return user.trips.filter{ it.score != null}.map { it.score }
+    fun getFromDriver(trips: List<Trip>): List<Trip?> {
+        val tripsScore  = trips.filter { it.score != null }
+        return tripsScore
     }
 
-    fun delete(userId: Int, tripId: Int): ResponseEntity<String> {
-        val trip = tripRepo.getByID(tripId)
-        if (trip.client.id != userId) {
-            throw BusinessException("Usuario no posee calificaciones para eliminar")
-        }
-        if(trip.score == null){
-            throw BusinessException("El viaje no tiene puntuacion")
-        }
-        val tripScore = tripScoreRepo.getByID(trip.score!!.id)
-        tripScoreRepo.delete(tripScore)
-        trip.deleteScore()
-        tripRepo.update(trip)
-        return ResponseEntity
-            .status(HttpStatus.OK)
-            .body("Elimino calificacion")
-    }
+    @Transactional
+    fun create(trip : Trip , score: TripScore) : ResponseEntity<String> {
+        val passenger = passengerRepo.findById(trip.client.id!!).get()
+        passenger.scoreTrip(trip,score.message,score.scorePoints)
 
-    fun create(tripScore: TripScoreDTO): ResponseEntity<String>{
-        val trip = tripRepo.getByID(tripScore.tripId)
-        val passenger = passengerRepo.searchByUserID(trip.client.id)
-        if(passenger == null){
-            throw BusinessException("No se encuentra pasajero")
+        try {
+            tripRepo.save(trip)
+        } catch (e: Exception) {
+            throw FailSaveEntity("Error en la calificacion de un viaje")
         }
-        passenger!!.scoreTrip(trip, tripScore.message, tripScore.scorePoints)
-
-        if(trip.score == null){
-            throw BusinessException("No se crea recomendacion")
-        }
-        tripScoreRepo.create(trip.score!!)
 
         return ResponseEntity
             .status(HttpStatus.OK)
-            .body("Se crea recomendacion")
+            .body("Creado con exito")
     }
+
+    @Transactional
+    fun delete(passenger: Passenger, trip: Trip) : ResponseEntity<String> {
+        trip.deleteScore(passenger)
+        try {
+            tripRepo.save(trip)
+        } catch (e: Exception) {
+            throw FailSaveEntity("Error en la eliminacion de una calificacion")
+        }
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body("Eliminada con exito")
+    }
+
 }

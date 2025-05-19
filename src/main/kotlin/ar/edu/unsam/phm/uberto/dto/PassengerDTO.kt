@@ -3,7 +3,7 @@ package ar.edu.unsam.phm.uberto.dto
 import ar.edu.unsam.phm.uberto.model.Passenger
 
 data class PassengerProfileDto(
-    val id: Int,
+    val id: Long,
     val firstname: String,
     val lastname: String,
     val age: Int,
@@ -13,24 +13,24 @@ data class PassengerProfileDto(
 )
 
 fun Passenger.toDTOProfile() = PassengerProfileDto(
-    id = userId,
+    id = id!!,
     firstname = firstName,
     lastname = lastName,
-    age = age,
+    age = age(),
     money = balance,
     cellphone = cellphone,
     img = img
 )
 
 data class FriendDto(
-    val id: Int,
+    val id: Long,
     val firstname: String,
     val lastname: String,
     val img: String,
 )
 
 fun Passenger.toDTOFriend() = FriendDto(
-    id = userId,
+    id = id!!,
     firstname = firstName,
     lastname = lastName,
     img = img
@@ -40,4 +40,13 @@ data class UpdatedPassengerDTO(
     val firstName: String?,
     val lastName: String?,
     val phone: Int?,
+)
+
+
+data class ImgDTO(
+    val img: String
+)
+
+fun Passenger.toDTOImg() = ImgDTO(
+    img = img
 )

@@ -2,72 +2,79 @@ package ar.edu.unsam.phm.uberto.controller
 
 import ar.edu.unsam.phm.uberto.dto.*
 import ar.edu.unsam.phm.uberto.model.Passenger
+import ar.edu.unsam.phm.uberto.security.TokenJwtUtil
 import ar.edu.unsam.phm.uberto.services.PassengerService
-import jakarta.websocket.server.PathParam
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @CrossOrigin(origins = ["http://localhost:8080", "http://localhost:5173"])
 @RestController
 @RequestMapping("/passenger")
-class PassengerController(private val passengerService: PassengerService) {
+class PassengerController(
+    private val passengerService: PassengerService,
+    private val jwtUtil: TokenJwtUtil
+) {
 
-    @GetMapping("/{id}")
-    fun getById(@PathVariable id: Int): PassengerProfileDto {
-        val passenger = passengerService.getPassenger(id)
+    @GetMapping()
+    fun getById(request: HttpServletRequest): PassengerProfileDto {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        val passenger = passengerService.getById(idToken)
         return passenger.toDTOProfile()
     }
 
 
     @PutMapping("/addBalance")
-    fun addBalance(@RequestParam id: Int, balance: Double): ResponseEntity<String> {
-        val currentPassenger = passengerService.getPassenger(id)
+    fun addBalance(@RequestParam balance: Double, request: HttpServletRequest): ResponseEntity<String> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        val currentPassenger = passengerService.getById(idToken)
         return passengerService.addBalance(currentPassenger, balance)
     }
 
-    @PutMapping("")
+    @PutMapping
     fun updatePassenger(
-        @RequestParam id: Int,
-        @RequestBody updatedInfo: UpdatedPassengerDTO): ResponseEntity<String> {
-        //TODO Preguntar!!!
-        val currentPassenger = passengerService.getPassenger(id)
-        return passengerService.updateInfo(currentPassenger,
-            updatedInfo.firstName, updatedInfo.lastName, updatedInfo.phone)
+        request: HttpServletRequest,
+        @RequestBody updatedInfo: UpdatedPassengerDTO
+    ): ResponseEntity<String> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        val currentPassenger = passengerService.getById(idToken)
+        return passengerService.updateInfo(
+            currentPassenger,
+            updatedInfo.firstName, updatedInfo.lastName, updatedInfo.phone
+        )
     }
 
-    @GetMapping("/{id}/friends")
-    fun getFriends(@PathVariable id: Int): List<FriendDto> {
-        val friends:List<Passenger> = passengerService.getFriends(id)
-        return friends.map { friend:Passenger ->
-            friend.toDTOFriend()
-        }
+    @GetMapping("/friends")
+    fun getFriends(request: HttpServletRequest): List<FriendDto> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        return passengerService.getFriends(idToken)
     }
 
     @PostMapping("/friends")
-    fun addFriend(@RequestParam passengerId: Int, friendId: Int): ResponseEntity<String> {
-        val currentPassenger = passengerService.getPassenger(passengerId)
-        val friend = passengerService.getPassenger(friendId)
-        return passengerService.addFriend(currentPassenger, friend)
+    fun addFriend(request: HttpServletRequest, @RequestParam friendId: Long): ResponseEntity<String> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        return passengerService.addFriend(idToken, friendId)
     }
 
     @DeleteMapping("/friends")
-    fun deleteFriend(@RequestParam passengerId: Int, friendId: Int): ResponseEntity<String> {
-        val currentPassenger = passengerService.getPassenger(passengerId)
-        val friend = passengerService.getPassenger(friendId)
-        return passengerService.deleteFriend(currentPassenger, friend)
+    fun deleteFriend(request: HttpServletRequest, friendId: Long): ResponseEntity<String> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        return passengerService.deleteFriend(idToken, friendId)
     }
 
-    @GetMapping("/{id}/friends/search")
-    fun filter(@PathVariable id: Int, @RequestParam filter: String): List<FriendDto> {
-        val nonFriendsPassengers:List<Passenger> = passengerService.searchNonFriends(id, filter)
-        return nonFriendsPassengers.map { friend:Passenger ->
+    @GetMapping("/friends/search")
+    fun filter(request: HttpServletRequest, @RequestParam filter: String): List<FriendDto> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        val nonFriendsPassengers: List<Passenger> = passengerService.searchNonFriends(idToken, filter)
+        return nonFriendsPassengers.map { friend: Passenger ->
             friend.toDTOFriend()
         }
     }
 
     @GetMapping("/img")
-    fun getImg(@RequestParam passengerId: Int): Map<String,String>{
-        val currentPassenger = passengerService.getPassenger(passengerId)
-        return mapOf("img" to currentPassenger.img)
+    fun getImg(request: HttpServletRequest): ImgDTO {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        val currentPassenger = passengerService.getById(idToken)
+        return currentPassenger.toDTOImg()
     }
 }

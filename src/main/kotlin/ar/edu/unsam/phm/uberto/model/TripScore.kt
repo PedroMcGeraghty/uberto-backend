@@ -1,12 +1,20 @@
 package ar.edu.unsam.phm.uberto.model
 
-import ar.edu.unsam.phm.uberto.repository.AvaliableInstance
+import jakarta.persistence.*
 import java.time.LocalDate
 
-data class TripScore(
-    var message:String = "",
-    var scorePoints:Int = 0,
-    var date:LocalDate = LocalDate.now(),
-//    var passenger: Passenger = Passenger(),
-    override var id: Int=0
-) : AvaliableInstance{}
+@Entity
+class TripScore  {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null
+
+    @Column(length = 255)
+    var message:String = ""
+
+    @Column
+    var scorePoints:Int = 0
+
+    @Column
+    var date:LocalDate = LocalDate.now()
+}

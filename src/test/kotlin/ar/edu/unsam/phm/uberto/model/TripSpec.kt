@@ -19,7 +19,7 @@ import java.time.temporal.ChronoUnit
 
 class TripSpec: DescribeSpec({
     isolationMode = IsolationMode.InstancePerTest
-    var trip: Trip = TripBuilder().build()
+    val trip: Trip = TripBuilder().build()
     describe(name="Given a trip"){
 
         it(name="Start date") {
@@ -55,56 +55,69 @@ class TripSpec: DescribeSpec({
         }
 
         describe(name="Score") {
-            it(name="No score by default"){
+            it(name = "No score by default") {
                 trip.score shouldBe null
                 trip.scored() shouldBe false
             }
 
-            it(name="Can be scored if is finished"){
-                val today:LocalDateTime = LocalDateTime.now()
-                val yesterday:LocalDateTime = today.minus(1, ChronoUnit.DAYS)
+            it(name = "Can be scored if is finished") {
+                val today: LocalDateTime = LocalDateTime.now()
+                val yesterday: LocalDateTime = today.minus(1, ChronoUnit.DAYS)
                 trip.date = yesterday
                 trip.finished() shouldBeEqual true
-                val score:TripScore = TripScore(message = "Score message", scorePoints = 5)
+                val score: TripScore = TripScore().apply {
+                    message = "Score message"
+                    scorePoints = 5
+                }
                 trip.scored() shouldBeEqual false
                 trip.addScore(score)
                 trip.scored() shouldBeEqual true
             }
 
-            it(name="Cannot be scored if is not finished"){
-                val today:LocalDateTime = LocalDateTime.now()
-                val tomorrow:LocalDateTime = today.plus(1, ChronoUnit.DAYS)
+            it(name = "Cannot be scored if is not finished") {
+                val today: LocalDateTime = LocalDateTime.now()
+                val tomorrow: LocalDateTime = today.plus(1, ChronoUnit.DAYS)
                 trip.date = tomorrow
                 trip.finished() shouldBeEqual false
-                val score:TripScore = TripScore(message = "Score message", scorePoints = 5)
+                val score: TripScore = TripScore().apply {
+                    message = "Score message"
+                    scorePoints = 5
+                }
                 shouldThrow<TripNotFinishedException> {
                     trip.addScore(score)
                 }
             }
 
-            it(name="Cannot be scored if is already scored"){
-                val today:LocalDateTime = LocalDateTime.now()
-                val yesterday:LocalDateTime = today.minus(1, ChronoUnit.DAYS)
+            it(name = "Cannot be scored if is already scored") {
+                val today: LocalDateTime = LocalDateTime.now()
+                val yesterday: LocalDateTime = today.minus(1, ChronoUnit.DAYS)
                 trip.date = yesterday
                 trip.finished() shouldBeEqual true
-                val score:TripScore = TripScore(message = "Score message", scorePoints = 5)
+                val score: TripScore = TripScore().apply {
+                    message = "Score message"
+                    scorePoints = 5
+                }
                 trip.addScore(score)
                 shouldThrow<ScoredTripException> {
                     trip.addScore(score)
                 }
             }
 
-            it(name="Score can be deleted"){
-                val today:LocalDateTime = LocalDateTime.now()
-                val yesterday:LocalDateTime = today.minus(1, ChronoUnit.DAYS)
-                trip.date = yesterday
-                trip.finished() shouldBeEqual true
-                val score:TripScore = TripScore(message = "Score message", scorePoints = 5)
+            it(name = "Score can be deleted") {
+                val today: LocalDateTime = LocalDateTime.now()
+                val yesterday: LocalDateTime = today.minus(1, ChronoUnit.DAYS)
+                val trip = TripBuilder()
+                    .setDate(yesterday.toString())
+                    .build()
+                val passenger = trip.client
+                passenger.id = 1
+                trip.client = passenger
 
+                trip.finished() shouldBeEqual true
                 trip.scored() shouldBeEqual false
-                trip.addScore(score)
+                passenger.scoreTrip(trip, "Score message", 5)
                 trip.scored() shouldBeEqual true
-                trip.deleteScore()
+                trip.deleteScore(passenger)
                 trip.scored() shouldBeEqual false
             }
         }

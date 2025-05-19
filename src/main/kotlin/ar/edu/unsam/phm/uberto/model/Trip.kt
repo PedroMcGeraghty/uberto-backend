@@ -1,24 +1,50 @@
 package ar.edu.unsam.phm.uberto.model
 
+import ar.edu.unsam.phm.uberto.BusinessException
 import ar.edu.unsam.phm.uberto.ScoredTripException
 import ar.edu.unsam.phm.uberto.TripNotFinishedException
-import ar.edu.unsam.phm.uberto.repository.AvaliableInstance
+import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-//instancio para que no de error
+@Entity
 class Trip(
-    var duration: Int = 0,
-    var numberPassengers: Int = 0,
-    var date: LocalDateTime = LocalDateTime.now(),
-    var origin: String = "",
-    var destination: String = "",
-    var client: Passenger = Passenger(),
-    var driver: Driver = SimpleDriver(),
-    override var id: Int = 0
-):AvaliableInstance{
+){
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null
+
+    @Column
+    var duration: Int = 0
+
+    @Column
+    var numberPassengers: Int = 0
+
+    @Column
+    lateinit var date: LocalDateTime
+
+    @Column(length = 40)
+    var origin: String = ""
+
+    @Column(length = 40)
+    var destination: String = ""
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "passenger_id", referencedColumnName = "id")
+    var client: Passenger = Passenger()
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_id", referencedColumnName = "id")
+    var driver: Driver = SimpleDriver()
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL],  orphanRemoval = true)
+    @JoinColumn(name = "tripscore_id", referencedColumnName = "id")
     var score: TripScore? = null
+
+    @Column(name= "end_date")
+    var finishedDateTime: LocalDateTime = LocalDateTime.now()
 
     fun addScore(newScore: TripScore){
         if(!this.finished()) throw TripNotFinishedException()
@@ -26,16 +52,30 @@ class Trip(
         this.score = newScore
     }
 
-    fun scored():Boolean = (this.score != null)
-    fun canDeleteScore(userId: Int) = userId == client.userId
-
-    fun deleteScore(){
+    fun deleteScore(passenger: Passenger){
+        validateDeleteScore(passenger)
         score = null
+    }
+
+    private fun validateDeleteScore(passenger: Passenger) {
+        if (!canDeleteScore(passenger.id!!)) { throw BusinessException("User has no ratings to delete") }
+        if (!scored()){ throw BusinessException("The trip has no score") }
+    }
+
+    fun scored():Boolean = (this.score != null)
+    fun canDeleteScore(userId: Long): Boolean {
+        return userId == client.id
     }
 
     fun price(): Double = this.driver.fee(duration, numberPassengers)
 
     fun pendingTrip()  : Boolean = date > LocalDateTime.now()
+
+    @PrePersist
+    @PreUpdate
+    fun endDate() {
+        finishedDateTime = finalizationDate()
+    }
 
     fun finalizationDate() : LocalDateTime = date.plus(duration.toLong(), ChronoUnit.MINUTES)
     fun finished() : Boolean  {

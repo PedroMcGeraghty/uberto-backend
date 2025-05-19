@@ -1,9 +1,12 @@
 package ar.edu.unsam.phm.uberto.controller
 
 import ar.edu.unsam.phm.uberto.dto.*
+import ar.edu.unsam.phm.uberto.model.Driver
+import ar.edu.unsam.phm.uberto.security.TokenJwtUtil
 import ar.edu.unsam.phm.uberto.services.DriverService
 import ar.edu.unsam.phm.uberto.services.TravelTimeMockService
 import exceptions.BusinessException
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
@@ -11,15 +14,25 @@ import java.time.LocalDateTime
 @CrossOrigin(origins = ["http://localhost:8080", "http://localhost:5173"])
 @RestController
 @RequestMapping("/driver")
-class DriverController(private val driverService: DriverService, val timeTripsService: TravelTimeMockService) {
+class DriverController(
+    private val driverService: DriverService,
+    val timeTripsService: TravelTimeMockService,
+    private val jwtUtil: TokenJwtUtil
+) {
 
-    @GetMapping("/{id}")
-    fun getByID(@PathVariable id:Int): DriverDTO {
-        val driver = driverService.getDriverData(id)
-        return driver.toDTO()
+    @GetMapping()
+    fun getByID(request: HttpServletRequest): DriverDTO {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        return driverService.getDriverData(idToken).toDTO()
     }
 
-    @GetMapping("/avaliable")
+    @GetMapping("/img")
+    fun getImg(request: HttpServletRequest): DriverImg {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        return driverService.getDriverData(idToken).toImgDTO()
+    }
+
+    @GetMapping("/available")
     fun getDriversAvailable(@RequestParam date: LocalDateTime,
                             @RequestParam origin: String,
                             @RequestParam destination: String,
@@ -27,20 +40,16 @@ class DriverController(private val driverService: DriverService, val timeTripsSe
         val timeMap = timeTripsService.getTime()
         val time = timeMap["time"] ?: throw BusinessException("Failure in the time calculation system")
         val avaliableDrivers = driverService.getDriversAvailable(date, time)
-        val driverCardDTO = avaliableDrivers.map{it.toCardDTO(timeMap["time"]!!, numberpassengers)}
-        return DriverCardAndTimeDTO(timeMap["time"]!!, driverCardDTO)
+        val avaliableDriverDTO = avaliableDrivers.map{
+            it.driver.toAvailableDTO(time, numberpassengers, it.averageScore)
+        }
+        return DriverCardAndTimeDTO(time = time, cardDrivers = avaliableDriverDTO)
     }
 
     @PostMapping()
-    fun changeProfile(@RequestBody driverDTO: DriverDTO): ResponseEntity<String>{
-        val driver = driverService.getDriverData(driverDTO.id)
-        driverService.changeProfile(driverDTO, driver)
-        return driverService.update(driver)
+    fun changeProfile(@RequestBody driverDTO: DriverDTO, request: HttpServletRequest): ResponseEntity<String> {
+        val idToken = jwtUtil.getIdFromTokenString(request)
+        return driverService.updateProfile(driverDTO, idToken)
     }
 
-    @GetMapping("/img")
-    fun getImg(@RequestParam driverid: Int): Map<String, String> {
-        val driver = driverService.getDriverData(driverid)
-        return mapOf("img" to driver.img)
-    }
 }

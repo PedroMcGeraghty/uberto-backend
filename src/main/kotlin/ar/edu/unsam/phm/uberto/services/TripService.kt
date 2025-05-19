@@ -1,46 +1,50 @@
 package ar.edu.unsam.phm.uberto.services
 
-import ar.edu.unsam.phm.uberto.BusinessException
-import ar.edu.unsam.phm.uberto.dto.FormTripDTO
+import ar.edu.unsam.phm.uberto.FailSaveEntity
+import ar.edu.unsam.phm.uberto.InsufficientBalanceException
+import ar.edu.unsam.phm.uberto.NotFoundEntityException
 import ar.edu.unsam.phm.uberto.dto.TripDTO
+import ar.edu.unsam.phm.uberto.model.Driver
+import ar.edu.unsam.phm.uberto.model.Passenger
 import ar.edu.unsam.phm.uberto.model.Trip
-import ar.edu.unsam.phm.uberto.repository.DriverRepository
-import ar.edu.unsam.phm.uberto.repository.PassengerRepository
 import ar.edu.unsam.phm.uberto.repository.TripsRepository
+import org.springframework.dao.DataAccessException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
-class TripService(val passengerRepo: PassengerRepository, val driverRepo: DriverRepository, val tripRepo: TripsRepository) {
+class TripService(val tripRepo: TripsRepository) {
 
-    fun createTrip(trip: TripDTO): ResponseEntity<String> {
+    fun getById(id: Long): Trip {
+        return tripRepo.findById(id).get()
+    }
 
-        val client = passengerRepo.searchByUserID(trip.userId)
-        val driver = driverRepo.searchByUserID(trip.driverId)
-        if(client == null || driver == null){
-            throw Exception("Fallo en la creacion de viaje")
+    @Transactional
+    fun createTrip(trip: TripDTO, client: Passenger, driver: Driver): ResponseEntity<String> {
+
+        val newTrip = Trip().apply {
+            duration = trip.duration
+            numberPassengers = trip.numberPassengers
+            date = trip.date
+            origin = trip.origin
+            destination = trip.destination
+            this.client = client
+            this.driver = driver
         }
 
-        val newTrip =
-            Trip(
-                trip.duration,
-                trip.numberPassengers,
-                trip.date,
-                trip.origin,
-                trip.destination,
-                client,
-                driver
-            )
+        try{
+            client.requestTrip(newTrip)
+            driver.responseTrip(newTrip, trip.duration)
+        }catch (e: Exception){
+            return ResponseEntity.badRequest().body("${e.message}")
+        }
 
-        client.requestTrip(newTrip)
-        driver.responseTrip(newTrip, trip.duration)
-
-        passengerRepo.update(client)
-        driverRepo.update(driver)
-        val successful = tripRepo.create(newTrip)
-        if(!successful){
-            throw BusinessException("No se pudo crear viaje")
+        try{
+            tripRepo.save(newTrip)
+        }catch (e: DataAccessException){
+            throw FailSaveEntity("Error en la creación del viaje")
         }
 
         return ResponseEntity
@@ -49,42 +53,32 @@ class TripService(val passengerRepo: PassengerRepository, val driverRepo: Driver
 
     }
 
-    fun getAllTrips(): List<Trip> {
-        return tripRepo.instances.toMutableList()
+    fun getAllByPassenger(passenger: Passenger): List<Trip> {
+        return tripRepo.findByClient(passenger)
     }
 
-    fun getById(id: Int, rol: String): List<Trip> {
-        if(rol == "passenger"){
-            val passenger = passengerRepo.searchByUserID(id) ?: throw Exception("Pasajero no encontrado")
-            return passenger.trips
-        }else{
-            val driver = driverRepo.searchByUserID(id) ?: throw Exception("Chofer no encontrado")
-            return driver.trips
-        }
+    fun getAllByDriver(driver: Driver): List<Trip> {
+        return tripRepo.findByDriver(driver)
     }
 
-    fun getPending(id: Int, rol: String): List<Trip> {
-        if(rol == "passenger"){
-            val passenger = passengerRepo.searchByUserID(id) ?: throw Exception("Pasajero no encontrado")
-            return passenger.pendingTrips()
-        }else{
-            val driver = driverRepo.searchByUserID(id) ?: throw Exception("Chofer no encontrado")
-            return driver.pendingTrips()
-        }
+    fun getPendingTripPassenger(passenger: Passenger): List<Trip> {
+        return getAllByPassenger(passenger).filter { it.pendingTrip() }
     }
 
-    fun getFinished(id: Int, rol: String): List<Trip> {
-        if(rol == "passenger"){
-            val passenger = passengerRepo.searchByUserID(id) ?: throw Exception("Pasajero no encontrado")
-            return passenger.finishedTrips()
-        }else{
-            val driver = driverRepo.searchByUserID(id) ?: throw Exception("Chofer no encontrado")
-            return driver.finishedTrips()
-        }
+    fun getFinishedTripPassenger(passenger: Passenger): List<Trip> {
+        return getAllByPassenger(passenger).filter { it.finished() }
     }
 
+    fun getFinishedTripDriver(diver: Driver): List<Trip> {
+        return getAllByDriver(diver).filter { it.finished() }
+    }
 
-    fun getTripsPendingFromDriver(formTripDTO: FormTripDTO): List<Trip> {
-        return tripRepo.searchByForm(formTripDTO, formTripDTO.userId)
+    fun getTripsPendingFromDriver(
+        origin: String,
+        destination: String,
+        numberPassenger: Int,
+        name: String,
+        driverId: Long): List<Trip> {
+        return tripRepo.searchByForm(origin, destination, numberPassenger, name, driverId)
     }
 }

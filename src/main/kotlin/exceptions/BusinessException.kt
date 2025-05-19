@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ResponseStatus
 
 @ResponseStatus(HttpStatus.NOT_FOUND)
-class BusinessException(msg: String) : Exception(msg)
+class BusinessException(msg: String) : RuntimeException(msg)
 
 @ResponseStatus(HttpStatus.NOT_FOUND)
-class NotFoundException(msg: String) : Exception(msg)
+class NotFoundException(msg: String) : RuntimeException(msg)
