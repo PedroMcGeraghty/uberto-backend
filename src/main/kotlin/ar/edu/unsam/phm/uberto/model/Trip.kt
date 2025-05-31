@@ -7,6 +7,7 @@ import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import kotlin.jvm.Transient
 
 @Entity
 class Trip(
@@ -35,16 +36,22 @@ class Trip(
     @JoinColumn(name = "passenger_id", referencedColumnName = "id")
     var client: Passenger = Passenger()
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driver_id", referencedColumnName = "id")
+    @Transient
     var driver: Driver = SimpleDriver()
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL],  orphanRemoval = true)
+    @Column(name = "driverMongoId")
+    lateinit var driverId: String
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL],  orphanRemoval = true )
     @JoinColumn(name = "tripscore_id", referencedColumnName = "id")
     var score: TripScore? = null
 
     @Column(name= "end_date")
     var finishedDateTime: LocalDateTime = LocalDateTime.now()
+
+    @Column(name = "price")
+    var price: Double = 0.0
+
 
     fun addScore(newScore: TripScore){
         if(!this.finished()) throw TripNotFinishedException()
@@ -63,18 +70,16 @@ class Trip(
     }
 
     fun scored():Boolean = (this.score != null)
+
     fun canDeleteScore(userId: Long): Boolean {
         return userId == client.id
     }
 
-    fun price(): Double = this.driver.fee(duration, numberPassengers)
-
-    fun pendingTrip()  : Boolean = date > LocalDateTime.now()
-
     @PrePersist
     @PreUpdate
-    fun endDate() {
+    fun calculatePrePersit() {
         finishedDateTime = finalizationDate()
+        price = this.driver.fee(duration, numberPassengers)
     }
 
     fun finalizationDate() : LocalDateTime = date.plus(duration.toLong(), ChronoUnit.MINUTES)

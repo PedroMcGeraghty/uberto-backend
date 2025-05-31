@@ -15,10 +15,6 @@ class TripScoreBuilder(val newScore: TripScore = TripScore()) {
         newScore.scorePoints = score
     }
 
-//    fun passengerId(passenger: Passenger): TripScoreBuilder = apply {
-//        newScore.passenger = passenger
-//    }
-
     fun date(date: LocalDate): TripScoreBuilder = apply {
         newScore.date = date
     }

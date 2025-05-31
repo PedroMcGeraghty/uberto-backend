@@ -1,22 +1,18 @@
 package ar.edu.unsam.phm.uberto.controller
 
-import ar.edu.unsam.phm.uberto.dto.TripScoreDTO
-import ar.edu.unsam.phm.uberto.dto.scoreToDTO
-import ar.edu.unsam.phm.uberto.model.Driver
-import ar.edu.unsam.phm.uberto.model.Passenger
+import ar.edu.unsam.phm.uberto.dto.TripScoreDTOMongo
+import ar.edu.unsam.phm.uberto.dto.toTripScoreDTOMongo
+import ar.edu.unsam.phm.uberto.dto.toTripScorePassengerDTOMongo
+import ar.edu.unsam.phm.uberto.model.Trip
 import ar.edu.unsam.phm.uberto.model.TripScore
-import ar.edu.unsam.phm.uberto.repository.TripScoreRepository
 import ar.edu.unsam.phm.uberto.security.TokenJwtUtil
 import ar.edu.unsam.phm.uberto.services.DriverService
 import ar.edu.unsam.phm.uberto.services.PassengerService
 import ar.edu.unsam.phm.uberto.services.TripScoreService
 import ar.edu.unsam.phm.uberto.services.TripService
 import jakarta.servlet.http.HttpServletRequest
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Private
-
 
 @CrossOrigin(origins = ["http://localhost:8080", "http://localhost:5173"])
 @RestController
@@ -30,46 +26,40 @@ class TripScoreController(
 ){
 
     @GetMapping("/passenger")
-    fun getScorePassenger(request: HttpServletRequest): List<TripScoreDTO>{
+    fun getScorePassenger(request: HttpServletRequest): List<TripScoreDTOMongo>{
         val idToken = jwtUtil.getIdFromTokenString(request)
-        val passenger = passengerService.getByIdTrip(idToken)
-        val trips = tripService.getAllByPassenger(passenger)
-        val tripScore = tripScoreService.getFromPassenger(trips)
-        return tripScore.map { it!!.scoreToDTO(idToken) }
+        val trips = tripService.getAllByPassenger(idToken)
+
+        return tripService.getTripScoresByTrips(trips)
     }
 
     @GetMapping("/driver")
-    fun getScoreDriver(request: HttpServletRequest): List<TripScoreDTO>{
-        val idToken = jwtUtil.getIdFromTokenString(request)
-        val driver = driverService.getByIdTrip(idToken)
-        val trips = tripService.getAllByDriver(driver)
-        val tripScore = tripScoreService.getFromDriver(trips)
-        return tripScore.map { it!!.scoreToDTO(null) }
+    fun getScoreDriver(request: HttpServletRequest): List<TripScoreDTOMongo>{
+        val idToken = jwtUtil.getIdDriverFromTokenString(request)
+        val driver = driverService.getScoreByDriverID(idToken)
+        return driver
     }
 
     @GetMapping("/confirmation")
-    fun getScoreConfirmation( @RequestParam driverId: Long): List<TripScoreDTO>{
-        val driver = driverService.getByIdTrip(driverId)
-        val trips = tripService.getAllByDriver(driver)
-        val tripScore = tripScoreService.getFromDriver(trips)
-        return tripScore.map { it!!.scoreToDTO(null) }
+    fun getScoreConfirmation( @RequestParam driverId: String): List<TripScoreDTOMongo>{
+        val driver = driverService.getScoreByDriverID(driverId)
+        return driver
     }
 
     @PostMapping()
-    fun create(@RequestBody tripScoreDTO: TripScoreDTO): ResponseEntity<String> {
-        val trip = tripService.getById(tripScoreDTO.tripId)
+    fun create(@RequestBody tripScore: TripScoreDTOMongo): ResponseEntity<String> {
+        val trip = tripService.getById(tripScore.tripId)
         val score = TripScore()
-        score.message = tripScoreDTO.message
-        score.scorePoints = tripScoreDTO.scorePoints
+        score.message = tripScore.message
+        score.scorePoints = tripScore.scorePoints
         return tripScoreService.create(trip,score)
     }
 
     @DeleteMapping()
     fun delete(request: HttpServletRequest , @RequestParam tripId: Long): ResponseEntity<String>{
         val idToken = jwtUtil.getIdFromTokenString(request)
-        val trip = tripService.getById(tripId)
-        val passenger = passengerService.getById(idToken)
-        return tripScoreService.delete(passenger,trip)
+        val trip = tripService.getWithPassengerByIdAndPassengerId(tripId, idToken)
+        return tripScoreService.delete(trip)
     }
 
 }

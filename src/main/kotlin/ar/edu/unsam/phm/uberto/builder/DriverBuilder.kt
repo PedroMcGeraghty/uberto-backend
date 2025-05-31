@@ -7,7 +7,8 @@ class DriverBuilder(val newDriver: Driver) {
 
     fun userId(id: Long): DriverBuilder = apply {
         if (newDriver.credentials == null) newDriver.credentials = UserAuthCredentials()
-        newDriver.credentials!!.id = id
+        newDriver.credentialsId = id
+
     }
 
 

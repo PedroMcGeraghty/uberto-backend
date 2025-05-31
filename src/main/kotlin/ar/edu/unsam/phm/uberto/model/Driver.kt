@@ -1,53 +1,52 @@
 package ar.edu.unsam.phm.uberto.model
 
-import ar.edu.unsam.phm.uberto.DriverNotAvaliableException
-import ar.edu.unsam.phm.uberto.dto.DriverDTO
-import ar.edu.unsam.phm.uberto.model.UserAuthCredentials
-import exceptions.BusinessException
-import jakarta.persistence.*
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
+import ar.edu.unsam.phm.uberto.dto.*
+import jakarta.persistence.PrePersist
+import jakarta.persistence.PreUpdate
+import org.springframework.data.annotation.Id
+import org.springframework.data.annotation.Transient
+import org.springframework.data.mongodb.core.mapping.Document
 
 
-@Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Document(collection = "mongodriver")
 abstract class Driver():User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Long? = null
+    var id: String? = null
 
-    @OneToOne
-    @JoinColumn(name="user_id", referencedColumnName = "id")
+    @Transient
     var credentials: UserAuthCredentials? = null
 
-    @Column(length = 50)
+    var credentialsId: Long? = null
+
     override lateinit var firstName: String
 
-    @Column(length = 50)
     override lateinit var lastName: String
 
-    @Column
     override var balance: Double = 0.0
 
-
-    @OneToMany(mappedBy = "driver", fetch = FetchType.LAZY)
+    @Transient
     override var trips: MutableList<Trip> = mutableListOf()
 
-    @Column(length = 255)
+    var tripsDTO: MutableList<TripDriver> = mutableListOf()
+
+    var tripsScoreDTO: MutableList<TripScoreDTOMongo> = mutableListOf()
+
     override lateinit var img: String
 
-    @Column
     var model:Int = 0
 
-    @Column(length = 255)
     lateinit var brand:String
 
-    @Column(length = 255)
     lateinit var serial:String
 
-    @Column
     var basePrice:Double = 0.0
+
+    @PrePersist
+    @PreUpdate
+    fun toTripDTO() {
+        tripsDTO = trips.map { it.toTripDriverDTO() }.toMutableList()
+    }
 
     override fun getScores(): List<TripScore> {
         return this.getScoredTrips().map{ it.score!! }
@@ -55,26 +54,9 @@ abstract class Driver():User {
 
     abstract fun plusBasePrice(time: Int, numberPassengers: Int):Double
 
-
     private fun getScoredTrips():List<Trip>{
         return this.trips.filter { it.score != null }
     }
-
-
-    fun avaliable(tripDate: LocalDateTime, tripDuration: Int):Boolean{
-        if(tripDate.isBefore(LocalDateTime.now())){
-            throw BusinessException("The date must be later than the current date")
-        }
-        val finishedDate =  tripDate.plus(tripDuration.toLong(), ChronoUnit.MINUTES)
-        return !this.tripOverlapping(tripDate, finishedDate) || trips.isEmpty()
-    }
-
-    fun tripOverlapping(tripStart: LocalDateTime, tripEnd: LocalDateTime):Boolean{
-        return this.pendingTrips().any{ pending:Trip ->
-            tripStart < pending.finalizationDate() && tripEnd > pending.date
-        }
-    }
-
 
     fun scoreAVG():Double{
         val avg = getScoredTrips().map { it.score!!.scorePoints }.average()
@@ -87,20 +69,14 @@ abstract class Driver():User {
 
     fun addTrip(trip:Trip) {
         this.trips.add(trip)
-        acceditTrip(trip.price())
+        acceditTrip(trip.price)
     }
 
     fun acceditTrip(price: Double){
         this.balance += price
     }
 
-    fun pendingTrips() = trips.filter { trip:Trip ->trip.pendingTrip()}
-    fun finishedTrips() = trips.filter { trip:Trip ->trip.finished()}
-
     fun responseTrip(newTrip: Trip, time: Int) {
-        if(!avaliable(newTrip.date, time)){
-            throw DriverNotAvaliableException()
-        }
         addTrip(newTrip)
     }
 
@@ -113,5 +89,35 @@ abstract class Driver():User {
         this.basePrice = dto.price
         return this
     }
+
+}
+
+@Document
+class BikeDriver(): Driver() {
+    private val reference:Double = 500.0
+    override fun plusBasePrice(time: Int, numberPassengers: Int): Double {
+        return if(time < 30) reference else reference + 100.0
+    }
+    override fun toString() = "Motorbiker"
+}
+
+@Document
+class SimpleDriver(): Driver() {
+    override fun plusBasePrice(time: Int, numberPassengers: Int): Double {
+        return 1000.0
+    }
+
+    override fun toString() = "Simple Driver"
+}
+
+@Document
+class PremiumDriver(): Driver() {
+    private val reference:Double = 1500.0
+
+    override fun plusBasePrice(time: Int, numberPassengers: Int): Double {
+        return if(numberPassengers > 1) reference else reference + 500.0
+    }
+
+    override fun toString() = "Premium Driver"
 
 }

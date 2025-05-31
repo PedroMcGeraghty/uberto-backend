@@ -1,8 +1,5 @@
 package ar.edu.unsam.phm.uberto.model
 
-
-
-
 interface User {
     var firstName:String
     var lastName:String

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/passenger")
 class PassengerController(
     private val passengerService: PassengerService,
-    private val jwtUtil: TokenJwtUtil
+    private val jwtUtil: TokenJwtUtil,
 ) {
 
     @GetMapping()
@@ -22,7 +22,6 @@ class PassengerController(
         val passenger = passengerService.getById(idToken)
         return passenger.toDTOProfile()
     }
-
 
     @PutMapping("/addBalance")
     fun addBalance(@RequestParam balance: Double, request: HttpServletRequest): ResponseEntity<String> {

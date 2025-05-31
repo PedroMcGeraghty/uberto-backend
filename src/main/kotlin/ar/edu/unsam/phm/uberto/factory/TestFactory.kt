@@ -106,19 +106,19 @@ class TestFactory(
     fun generateTokenPassengerTest(username: String): String{
         val userAuth = authService.loadUserByUsername(username) as UserAuthCredentials
         val user = passengerService.getByCredentialsId(userAuth.id!!)
-        return jwtUtil.generate(userAuth, user.id!!)
+        return jwtUtil.generate(userAuth, user.id!!.toString())
     }
 
     fun generateTokenDriverTest(username: String): String{
         val userAuth = authService.loadUserByUsername(username) as UserAuthCredentials
-        val user = driverService.getByCredentialsId(userAuth.id!!)
+        val user = driverService.getByCredentialsId(userAuth.id!!.toString())
         return jwtUtil.generate(userAuth, user.id!!)
     }
 
     fun generateInvalidToken(username:String): String{
         val userAuth = authService.loadUserByUsername(username) as UserAuthCredentials
-        val user = driverService.getByCredentialsId(userAuth.id!!)
-        return jwtUtil.generate(userAuth, 28)
+        val user = driverService.getByCredentialsId(userAuth.id!!.toString())
+        return jwtUtil.generate(userAuth, "28")
     }
 
 }

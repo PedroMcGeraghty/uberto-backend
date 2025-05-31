@@ -24,7 +24,7 @@ class TripRepositoryTest() {
 
     @Autowired lateinit var tripRepository: TripsRepository
     @Autowired lateinit var passengerRepository: PassengerRepository
-    @Autowired lateinit var driverRepository: DriverRepository
+    @Autowired lateinit var driverRepository: MongoDriverRepository
 
     @Test
     fun `buscar un trip asociado a un passenger`(){

@@ -1,7 +1,7 @@
 package ar.edu.unsam.phm.uberto.builder
 
-import ar.edu.unsam.phm.uberto.model.Passenger
 import ar.edu.unsam.phm.uberto.model.Driver
+import ar.edu.unsam.phm.uberto.model.Passenger
 import ar.edu.unsam.phm.uberto.model.Trip
 import java.time.LocalDateTime
 
@@ -10,7 +10,9 @@ class TripBuilder(val newTrip: Trip = Trip()) {
 
     fun driver(driver: Driver): TripBuilder = apply {
         newTrip.driver = driver
+        newTrip.driverId = driver.id!!
     }
+
 
     fun passenger(client: Passenger): TripBuilder = apply {
         newTrip.client = client

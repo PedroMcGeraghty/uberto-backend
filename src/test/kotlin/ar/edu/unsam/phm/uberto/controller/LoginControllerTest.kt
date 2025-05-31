@@ -8,7 +8,7 @@ import ar.edu.unsam.phm.uberto.model.Driver
 import ar.edu.unsam.phm.uberto.model.Passenger
 import ar.edu.unsam.phm.uberto.model.Role
 import ar.edu.unsam.phm.uberto.repository.AuthRepository
-import ar.edu.unsam.phm.uberto.repository.DriverRepository
+import ar.edu.unsam.phm.uberto.repository.MongoDriverRepository
 import ar.edu.unsam.phm.uberto.repository.PassengerRepository
 import ar.edu.unsam.phm.uberto.security.TokenJwtUtil
 import ar.edu.unsam.phm.uberto.services.AuthService
@@ -49,7 +49,7 @@ class LoginControllerTest(
     @Autowired var authService: AuthService,
     @Autowired var passengerService: PassengerService,
     @Autowired var jwtUtil: TokenJwtUtil,
-    @Autowired var driverRepo: DriverRepository,
+    @Autowired var driverRepo: MongoDriverRepository,
     @Autowired var passengerRepo: PassengerRepository,
     @Autowired var mockMvc: MockMvc,
     @Autowired var driverService: DriverService,

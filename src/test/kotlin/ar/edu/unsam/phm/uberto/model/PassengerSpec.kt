@@ -88,7 +88,7 @@ class PassengerSpec : DescribeSpec({
                 val balance:Double = 1000000.0
                 passenger.loadBalance(balance)
                 passenger.requestTrip(trip)
-                passenger.balance shouldBeExactly (balance - trip.price())
+                passenger.balance shouldBeExactly (balance - trip.price)
             }
 
             it(name="Insufficient balance"){

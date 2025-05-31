@@ -3,7 +3,7 @@ package ar.edu.unsam.phm.uberto
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ResponseStatus
 
-class FailSaveEntity(msg: String) : RuntimeException(msg)
+class FailSaveException(msg: String) : RuntimeException(msg)
 
 class BusinessException(msg: String) : RuntimeException(msg)
 

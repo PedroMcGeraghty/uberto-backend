@@ -1,15 +1,11 @@
 package ar.edu.unsam.phm.uberto.services
 
-import ar.edu.unsam.phm.uberto.BusinessException
-import ar.edu.unsam.phm.uberto.FailSaveEntity
-import ar.edu.unsam.phm.uberto.dto.TripScoreDTO
-import ar.edu.unsam.phm.uberto.model.Passenger
+import ar.edu.unsam.phm.uberto.FailSaveException
+import ar.edu.unsam.phm.uberto.dto.toTripScoreDTOMongo
 import ar.edu.unsam.phm.uberto.model.Trip
 import ar.edu.unsam.phm.uberto.model.TripScore
-import ar.edu.unsam.phm.uberto.model.User
-import ar.edu.unsam.phm.uberto.repository.DriverRepository
+import ar.edu.unsam.phm.uberto.repository.MongoDriverRepository
 import ar.edu.unsam.phm.uberto.repository.PassengerRepository
-import ar.edu.unsam.phm.uberto.repository.TripScoreRepository
 import ar.edu.unsam.phm.uberto.repository.TripsRepository
 import jakarta.transaction.Transactional
 import org.springframework.http.HttpStatus
@@ -19,27 +15,23 @@ import org.springframework.stereotype.Service
 @Service
 class TripScoreService(
     private val tripRepo: TripsRepository,
-    private val passengerRepo: PassengerRepository
+    private val passengerRepo: PassengerRepository,
+    private val driverRepo: MongoDriverRepository
 ) {
-    fun getFromPassenger(trips:List<Trip>): List<Trip?>{
-        val tripsScore  = trips.filter { it.score != null }
-        return tripsScore
-    }
-
-    fun getFromDriver(trips: List<Trip>): List<Trip?> {
-        val tripsScore  = trips.filter { it.score != null }
-        return tripsScore
-    }
 
     @Transactional
     fun create(trip : Trip , score: TripScore) : ResponseEntity<String> {
         val passenger = passengerRepo.findById(trip.client.id!!).get()
+        val driver = driverRepo.findById(trip.driverId).get()
         passenger.scoreTrip(trip,score.message,score.scorePoints)
 
         try {
-            tripRepo.save(trip)
+            val savedTrip = tripRepo.save(trip)
+            driver.tripsDTO.find { it.id == savedTrip.id }?.apply { this.rating = score.scorePoints }
+            driver.tripsScoreDTO.add(savedTrip.toTripScoreDTOMongo())
+            driverRepo.save(driver)
         } catch (e: Exception) {
-            throw FailSaveEntity("Error en la calificacion de un viaje")
+            throw FailSaveException("Error en la calificacion de un viaje")
         }
 
         return ResponseEntity
@@ -48,12 +40,16 @@ class TripScoreService(
     }
 
     @Transactional
-    fun delete(passenger: Passenger, trip: Trip) : ResponseEntity<String> {
-        trip.deleteScore(passenger)
+    fun delete( trip: Trip ) : ResponseEntity<String> {
+        trip.deleteScore(trip.client)
         try {
+            val driver = driverRepo.findById(trip.driverId).get()
+            driver.tripsDTO.find {it.id == trip.id }?.rating = 0
+            driver.tripsScoreDTO.removeIf {it.tripId == trip.id }
+            driverRepo.save(driver)
             tripRepo.save(trip)
         } catch (e: Exception) {
-            throw FailSaveEntity("Error en la eliminacion de una calificacion")
+            throw FailSaveException("Error en la eliminacion de una calificacion")
         }
         return ResponseEntity
             .status(HttpStatus.OK)

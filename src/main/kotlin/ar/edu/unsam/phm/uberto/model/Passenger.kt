@@ -1,7 +1,6 @@
 package ar.edu.unsam.phm.uberto.model
 
 import ar.edu.unsam.phm.uberto.*
-import ar.edu.unsam.phm.uberto.model.UserAuthCredentials
 import jakarta.persistence.*
 import java.time.LocalDate
 import java.time.Period
@@ -88,11 +87,11 @@ class Passenger : User {
     }
 
     private fun validateTrip(trip: Trip): Boolean {
-        return this.balance < trip.price()
+        return this.balance < trip.price
     }
 
     private fun addTrip(trip: Trip) {
-        this.payTrip(trip.price())
+        this.payTrip(trip.price)
         this.trips.add(trip)
     }
 

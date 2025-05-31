@@ -12,7 +12,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 import ar.edu.unsam.phm.uberto.factory.TestFactory
-import ar.edu.unsam.phm.uberto.repository.DriverRepository
+import ar.edu.unsam.phm.uberto.repository.MongoDriverRepository
 import ar.edu.unsam.phm.uberto.repository.PassengerRepository
 import ar.edu.unsam.phm.uberto.repository.TripScoreRepository
 import ar.edu.unsam.phm.uberto.repository.TripsRepository
@@ -37,7 +37,7 @@ class DriverControllerSpringTest(
     @Autowired var mockMvc: MockMvc,
     @Autowired var driverService: DriverService,
     @Autowired var authService: AuthService,
-    @Autowired var driverRepository: DriverRepository,
+    @Autowired var driverRepository: MongoDriverRepository,
     @Autowired var tripRepository: TripsRepository,
     @Autowired var passengerService: PassengerService,
     @Autowired var jwtUtil: TokenJwtUtil,
@@ -89,7 +89,7 @@ class DriverControllerSpringTest(
     @Test
     fun `creo un viaje y lo agrego, el chofer no estará disponible esa fecha`() {
         // Me creo el viaje
-        val driver = driverRepository.findById(1).get()
+        val driver = driverRepository.findById("1").get()
         val passenger = passengerRepository.findById(1).get()
         val trip = testFactory.createTrip(passenger, driver)
 
@@ -126,7 +126,7 @@ class DriverControllerSpringTest(
     @Test
     fun `recibo un driverDto y actualizo sus campos`() {
         val updateInfo = DriverDTO(
-            1,
+            "1",
             "XYZ123",
             "Pepito",
             "Pérez",

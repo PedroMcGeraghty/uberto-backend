@@ -30,12 +30,13 @@ class JwtTokenValidator(
         if(authHeader != null && authHeader.startsWith("Bearer ")){
             val jwtToken = authHeader.substring(7)
             val decodedJWT = jwtUtils.validateToken(jwtToken)
-            val userId = jwtUtils.getSpecificClaim(decodedJWT, "userID").asLong()
-            val username = jwtUtils.extractUsername(decodedJWT)
             val userRole = jwtUtils.getSpecificClaim(decodedJWT, "rol")
                 .asList(String::class.java)
                 .first()
                 .removePrefix("ROLE_")
+
+            val userId = jwtUtils.getSpecificClaim(decodedJWT, "userID")
+            val username = jwtUtils.extractUsername(decodedJWT)
 
             val roles = jwtUtils.getSpecificClaim(decodedJWT, "rol")
                 .asList(String::class.java)
@@ -46,14 +47,9 @@ class JwtTokenValidator(
                 this.role= Role.valueOf(userRole)
             }
 
-            val newToken = jwtUtils.generate(userCredentials, userId)
+            val newToken = jwtUtils.generate(userCredentials, userId.asString())
             response.setHeader("refresh-token", newToken)
             response.setHeader("Access-Control-Expose-Headers", "refresh-token")
-
-//            if (jwtUtils.shouldTokenRefresh(jwtToken)) {
-//                // Crear las credenciales necesarias para generar el nuevo token
-//
-//            }
 
             val context :  SecurityContext = SecurityContextHolder.getContext()
             val authentication : Authentication = UsernamePasswordAuthenticationToken(username, null, roles)

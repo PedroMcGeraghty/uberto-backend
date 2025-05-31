@@ -1,12 +1,11 @@
 package ar.edu.unsam.phm.uberto.controller
 
 
-import ar.edu.unsam.phm.uberto.dto.TripDTO
 import ar.edu.unsam.phm.uberto.factory.TestFactory
 import ar.edu.unsam.phm.uberto.model.Passenger
 import ar.edu.unsam.phm.uberto.model.PremiumDriver
 import ar.edu.unsam.phm.uberto.model.Trip
-import ar.edu.unsam.phm.uberto.repository.DriverRepository
+import ar.edu.unsam.phm.uberto.repository.MongoDriverRepository
 import ar.edu.unsam.phm.uberto.repository.PassengerRepository
 import ar.edu.unsam.phm.uberto.repository.TripsRepository
 import ar.edu.unsam.phm.uberto.security.TokenJwtUtil
@@ -40,7 +39,7 @@ class TripControllerWebMvcTest(
     @Autowired var driverService: DriverService,
     @Autowired var tripRepository: TripsRepository,
     @Autowired var passengerRepository: PassengerRepository,
-    @Autowired var driverRepository: DriverRepository,
+    @Autowired var driverRepository: MongoDriverRepository,
     @Autowired var mockMvc: MockMvc,
     @Autowired var authService: AuthService,
     @Autowired var jwtUtil: TokenJwtUtil,
@@ -63,7 +62,7 @@ class TripControllerWebMvcTest(
         val user = authService.findUserByUsername("adrian")
 
         val passenger = passengerService.getById(user!!.id!!)
-        val driver = driverRepository.findById(1).get()
+        val driver = driverRepository.findById("1").get()
         val trip = Trip().apply {
             client = passenger
             this.driver = driver
