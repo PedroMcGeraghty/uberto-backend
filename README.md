@@ -199,8 +199,8 @@ Ejemplo:
 
 ```bash
 # Clonar el proyecto
-git clone https://github.com/tu_usuario/uberto.git
-cd uberto
+git clone https://github.com/PedroMcGeraghty/uberto-backend.git
+cd uberto-backend
 
 # Iniciar servicios con Docker
 docker-compose up -d
